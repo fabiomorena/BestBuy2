@@ -66,3 +66,40 @@ class Product:
             return self.promotion.apply_promotion(self, quantity)
         else:
             return self.price * quantity
+
+class NonStockedProduct(Product):
+    """Represents a product that has no quantity and is always available."""
+    def __init__(self, name: str, price: float):
+        super().__init__(name, price, 0)  # Quantity is always 0
+
+    def show(self) -> str:
+        """Returns a string representation of the non-stocked product."""
+        promotion_info = f", Promotion: {self.promotion.name}" if self.promotion else ""
+        return f"{self.name}, Price: ${self.price}{promotion_info}"
+
+    def buy(self, quantity: int) -> float:
+        """Processes the purchase of a non-stocked product."""
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive.")
+
+        # No stock check is needed for non-stocked products
+        if self.promotion:
+            return self.promotion.apply_promotion(self, quantity)
+        else:
+            return self.price * quantity
+
+class LimitedProduct(Product):
+    """Represents a product that has a purchase limit per order."""
+    def __init__(self, name: str, price: float, quantity: int, maximum: int):
+        super().__init__(name, price, quantity)
+        self.maximum = maximum
+
+    def buy(self, quantity: int) -> float:
+        """
+        Processes a purchase, enforcing the maximum quantity limit.
+        """
+        if quantity > self.maximum:
+            raise Exception(f"Cannot purchase more than {self.maximum} of '{self.name}'.")
+        
+        return super().buy(quantity)
+
