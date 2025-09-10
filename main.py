@@ -63,3 +63,4 @@ def test_order_insufficient_stock(setup_store):
     order_list = [(products_to_order[0], 11)]  # Requesting more than available
     with pytest.raises(Exception, match="Not enough stock for 'MacBook Air M2'"):
         store.order(order_list)
+        
