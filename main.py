@@ -1,66 +1,110 @@
-import pytest
-from store import Store
-from products import Product
+import products
+import promotions
+import store
 
+def start(best_buy):
+    """
+    Starts the command-line interface for the Best Buy store.
+    """
+    while True:
+        print("\n-----------")
+        print("Best Buy Menu")
+        print("-----------")
+        print("1. List all products in store")
+        print("2. Show total amount in store")
+        print("3. Make an order")
+        print("4. Quit")
 
-@pytest.fixture
-def setup_store():
-    """Fixture to create a store with some products for testing."""
+        choice = input("Please choose a number: ")
+
+        if choice == '1':
+            list_products(best_buy)
+        elif choice == '2':
+            show_total_quantity(best_buy)
+        elif choice == '3':
+            make_order(best_buy)
+        elif choice == '4':
+            print("Bye!")
+            break
+        else:
+            print("Invalid choice. Please enter a number from 1 to 4.")
+
+def list_products(best_buy):
+    """Lists all active products in the store."""
+    print("\n--- Available Products ---")
+    all_products = best_buy.get_all_products()
+    for i, product in enumerate(all_products, 1):
+        print(f"{i}. {product.show()}")
+
+def show_total_quantity(best_buy):
+    """Shows the total quantity of all items in the store."""
+    total_quantity = best_buy.get_total_quantity()
+    print(f"\nTotal items in store: {total_quantity}")
+
+def make_order(best_buy):
+    """Handles the process of making an order."""
+    all_products = best_buy.get_all_products()
+    if not all_products:
+        print("Sorry, there are no products to order.")
+        return
+
+    list_products(best_buy)
+    shopping_list = []
+
+    while True:
+        try:
+            product_choice = input("Which product # do you want? (or 'done' to finish): ")
+            if product_choice.lower() == 'done':
+                break
+
+            product_index = int(product_choice) - 1
+            if not 0 <= product_index < len(all_products):
+                print("Error: Invalid product number.")
+                continue
+
+            chosen_product = all_products[product_index]
+
+            quantity_choice = input(f"What amount of {chosen_product.name} do you want?: ")
+            quantity = int(quantity_choice)
+
+            shopping_list.append((chosen_product, quantity))
+            print("Product added to list!")
+
+        except ValueError:
+            print("Error: Please enter a valid number.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    if shopping_list:
+        try:
+            total_cost = best_buy.order(shopping_list)
+            print(f"\nOrder successful! Total cost: ${total_cost:.2f}")
+        except Exception as e:
+            print(f"\nCould not complete the order. Reason: {e}")
+
+def main():
+    # Setup initial stock of inventory
     product_list = [
-        Product("MacBook Air M2", price=1450, quantity=10),
-        Product("Bose QuietComfort Earbuds", price=250, quantity=20),
-        Product("Google Pixel 7", price=500, quantity=15),
+        products.Product("MacBook Air M2", price=1450, quantity=100),
+        products.Product("Bose QuietComfort Earbuds", price=250, quantity=500),
+        products.Product("Google Pixel 7", price=500, quantity=250),
+        products.NonStockedProduct("Windows License", price=125),
+        products.LimitedProduct("Shipping", price=10, quantity=250, maximum=1)
     ]
-    return Store(product_list)
+
+    # Create promotion catalog
+    second_half_price = promotions.SecondHalfPrice("Second Half price!")
+    buy_two_get_one_free = promotions.BuyTwoGetOneFree("Buy Two Get One Free!")
+    thirty_percent = promotions.PercentageDiscount("30% off!", percent=30)
+
+    # Add promotions to products
+    product_list[0].set_promotion(second_half_price)
+    product_list[1].set_promotion(buy_two_get_one_free)
+    product_list[3].set_promotion(thirty_percent)
+
+    best_buy = store.Store(product_list)
+    start(best_buy)
 
 
-def test_add_product(setup_store):
-    """Test that adding a product increases the store's product count."""
-    store = setup_store
-    initial_product_count = len(store.get_all_products())
-    new_product = Product("Sony WH-1000XM5", price=400, quantity=30)
-    store.add_product(new_product)
-    assert len(store.get_all_products()) == initial_product_count + 1
-
-
-def test_remove_product(setup_store):
-    """Test that removing a product decreases the store's product count."""
-    store = setup_store
-    initial_product_count = len(store.get_all_products())
-    product_to_remove = store.get_all_products()[0]
-    store.remove_product(product_to_remove)
-    assert len(store.get_all_products()) == initial_product_count - 1
-
-
-def test_get_total_quantity(setup_store):
-    """Test that the total quantity of all items in the store is correct."""
-    store = setup_store
-    assert store.get_total_quantity() == 45
-
-
-def test_get_all_products(setup_store):
-    """Test that all active products in the store are returned."""
-    store = setup_store
-    all_products = store.get_all_products()
-    assert len(all_products) == 3
-
-
-def test_order_successful(setup_store):
-    """Test that a valid order is processed correctly."""
-    store = setup_store
-    products_to_order = store.get_all_products()
-    order_list = [(products_to_order[0], 1), (products_to_order[1], 2)]
-    total_cost = store.order(order_list)
-    assert total_cost == 1950.0
-    assert products_to_order[0].get_quantity() == 9
-    assert products_to_order[1].get_quantity() == 18
-
-
-def test_order_insufficient_stock(setup_store):
-    """Test that an order with insufficient stock raises an exception."""
-    store = setup_store
-    products_to_order = store.get_all_products()
-    order_list = [(products_to_order[0], 11)]  # Requesting more than available
-    with pytest.raises(Exception, match="Not enough stock for 'MacBook Air M2'"):
-        store.order(order_list)
-        
+if __name__ == "__main__":
+    main()
